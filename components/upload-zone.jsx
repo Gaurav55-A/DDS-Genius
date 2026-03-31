@@ -2,17 +2,18 @@
 
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, Thermometer, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, Thermometer, Loader2, CheckCircle2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 
-export default function UploadZone({ onUploadComplete }) {
+export default function UploadZone({ onUploadSuccess, processedReportId }) {
   const [sampleReport, setSampleReport] = useState(null);
   const [thermalImages, setThermalImages] = useState(null);
-  const [processing, setProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [processingStep, setProcessingStep] = useState('');
   const [reportId, setReportId] = useState(null);
 
   const onDropSample = useCallback((acceptedFiles) => {
@@ -47,23 +48,29 @@ export default function UploadZone({ onUploadComplete }) {
       return;
     }
 
-    setProcessing(true);
+    setIsProcessing(true);
     setProgress(0);
+    setProcessingStep('Uploading files...');
 
     try {
       const formData = new FormData();
       formData.append('sampleReport', sampleReport);
       formData.append('thermalImages', thermalImages);
 
-      setProgress(20);
-      toast.info('Uploading files...');
+      setProgress(10);
+      setProcessingStep('Extracting text from PDFs...');
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const response = await fetch('/api/process', {
         method: 'POST',
         body: formData,
       });
 
-      setProgress(60);
+      setProgress(40);
+      setProcessingStep('AI is matching thermal data with visual observations...');
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (!response.ok) {
         const error = await response.json();
@@ -71,19 +78,27 @@ export default function UploadZone({ onUploadComplete }) {
       }
 
       const data = await response.json();
+      
+      setProgress(80);
+      setProcessingStep('Generating professional PDF...');
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       setProgress(100);
+      setProcessingStep('Complete!');
       setReportId(data.reportId);
       
       toast.success('Report processed successfully!');
       
-      if (onUploadComplete) {
-        onUploadComplete(data);
+      if (onUploadSuccess) {
+        onUploadSuccess(data.reportId);
       }
     } catch (error) {
       console.error('Processing error:', error);
       toast.error(error.message || 'Failed to process reports');
-    } finally {
-      setProcessing(false);
+      setIsProcessing(false);
+      setProgress(0);
+      setProcessingStep('');
     }
   };
 
@@ -92,21 +107,36 @@ export default function UploadZone({ onUploadComplete }) {
     setThermalImages(null);
     setProgress(0);
     setReportId(null);
+    setIsProcessing(false);
+    setProcessingStep('');
   };
 
   if (reportId) {
     return (
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className="w-full max-w-2xl mx-auto border-2 border-electric-yellow/30">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <CheckCircle2 className="h-16 w-16 text-green-500" />
+            <div className="icon-glow-yellow h-16 w-16 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="h-10 w-10 text-electric-yellow" />
+            </div>
           </div>
-          <CardTitle className="text-2xl">Report Generated Successfully!</CardTitle>
-          <CardDescription>Report ID: {reportId}</CardDescription>
+          <CardTitle className="text-2xl font-heading">Report Generated Successfully!</CardTitle>
+          <CardDescription className="font-body">Report ID: {reportId}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4 justify-center">
-            <Button onClick={() => window.location.href = `/dashboard/analytics`}>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Button 
+              onClick={() => window.location.href = `/reports/${reportId}`}
+              className="bg-electric-yellow hover:bg-electric-yellow/90 text-slate-950 font-medium"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View Report
+            </Button>
+            <Button 
+              onClick={() => window.location.href = `/dashboard/analytics`}
+              variant="outline"
+              className="border-minimal"
+            >
               View Analytics
             </Button>
             <Button onClick={handleReset} variant="ghost">
@@ -124,27 +154,27 @@ export default function UploadZone({ onUploadComplete }) {
         {/* Sample Report Upload */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-heading">
               <FileText className="h-5 w-5" />
               Sample Report
             </CardTitle>
-            <CardDescription>Visual inspection report (PDF)</CardDescription>
+            <CardDescription className="font-body">Visual inspection report (PDF)</CardDescription>
           </CardHeader>
           <CardContent>
             <div
               {...getSampleRootProps()}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 isSampleDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
-              } ${sampleReport ? 'bg-green-50 border-green-500' : ''}`}
+              } ${sampleReport ? 'bg-green-50 dark:bg-green-950/20 border-green-500' : ''}`}
             >
               <input {...getSampleInputProps()} />
               <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               {sampleReport ? (
-                <p className="text-sm font-medium text-green-600">
+                <p className="text-sm font-medium text-green-600 dark:text-green-400 font-body">
                   ✓ {sampleReport.name}
                 </p>
               ) : (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-body">
                   {isSampleDragActive ? 'Drop the file here' : 'Drag & drop or click to upload'}
                 </p>
               )}
@@ -155,27 +185,27 @@ export default function UploadZone({ onUploadComplete }) {
         {/* Thermal Images Upload */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-heading">
               <Thermometer className="h-5 w-5" />
               Thermal Images
             </CardTitle>
-            <CardDescription>Thermal imaging data (PDF)</CardDescription>
+            <CardDescription className="font-body">Thermal imaging data (PDF)</CardDescription>
           </CardHeader>
           <CardContent>
             <div
               {...getThermalRootProps()}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 isThermalDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
-              } ${thermalImages ? 'bg-green-50 border-green-500' : ''}`}
+              } ${thermalImages ? 'bg-green-50 dark:bg-green-950/20 border-green-500' : ''}`}
             >
               <input {...getThermalInputProps()} />
               <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               {thermalImages ? (
-                <p className="text-sm font-medium text-green-600">
+                <p className="text-sm font-medium text-green-600 dark:text-green-400 font-body">
                   ✓ {thermalImages.name}
                 </p>
               ) : (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-body">
                   {isThermalDragActive ? 'Drop the file here' : 'Drag & drop or click to upload'}
                 </p>
               )}
@@ -187,22 +217,28 @@ export default function UploadZone({ onUploadComplete }) {
       {/* Process Button */}
       <Card>
         <CardContent className="pt-6">
-          {processing && (
-            <div className="mb-4 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Processing reports...</span>
-                <span>{progress}%</span>
+          {isProcessing && (
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-electric-yellow" />
+                <span className="text-sm font-medium text-foreground font-body">{processingStep}</span>
               </div>
-              <Progress value={progress} />
+              <div className="space-y-2">
+                <Progress value={progress} className="h-2" />
+                <div className="flex justify-between text-xs text-muted-foreground font-body">
+                  <span>Processing...</span>
+                  <span>{progress}%</span>
+                </div>
+              </div>
             </div>
           )}
           <Button
             onClick={handleProcess}
-            disabled={!sampleReport || !thermalImages || processing}
-            className="w-full"
+            disabled={!sampleReport || !thermalImages || isProcessing}
+            className="w-full bg-electric-yellow hover:bg-electric-yellow/90 text-slate-950 font-medium"
             size="lg"
           >
-            {processing ? (
+            {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Processing...

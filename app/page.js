@@ -9,11 +9,11 @@ import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const router = useRouter();
-  const [uploadComplete, setUploadComplete] = useState(false);
+  const [processedReportId, setProcessedReportId] = useState(null);
 
-  const handleUploadComplete = (data) => {
-    setUploadComplete(true);
-    console.log('Upload complete:', data);
+  const handleUploadSuccess = (reportId) => {
+    setProcessedReportId(reportId);
+    console.log('Report processed successfully:', reportId);
   };
 
   return (
@@ -62,7 +62,10 @@ export default function Home() {
 
         {/* Upload Section */}
         <div className="max-w-5xl mx-auto">
-          <UploadZone onUploadComplete={handleUploadComplete} />
+          <UploadZone 
+            onUploadSuccess={handleUploadSuccess}
+            processedReportId={processedReportId}
+          />
         </div>
 
         {/* Features */}
