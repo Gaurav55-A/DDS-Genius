@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Renders a specific page from a PDF URL using pdfjs-dist (pure JS, works in browser).
- * Fetches the PDF as raw bytes first to avoid CORS issues with cross-origin URLs.
+ * Renders a specific page from a PDF URL using pdfjs-dist.
+ * Fetches PDF through our own API proxy to avoid CORS.
+ * Uses a locally-hosted worker file for reliability.
  */
 export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', className = '' }) {
   const canvasRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const renderAttempted = useRef(false);
 
   useEffect(() => {
     if (!pdfUrl || !pageNumber) {
@@ -18,6 +20,10 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
       return;
     }
 
+    // Prevent double renders in React strict mode
+    if (renderAttempted.current) return;
+    renderAttempted.current = true;
+
     let cancelled = false;
 
     async function renderPage() {
@@ -25,24 +31,31 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
         setLoading(true);
         setError(null);
 
-        // Step 1: Fetch the PDF as raw bytes ourselves (avoids CORS issues)
-        const response = await fetch(pdfUrl);
+        console.log(`[PdfRenderer] Loading page ${pageNumber} from:`, pdfUrl);
+
+        // Step 1: Fetch the PDF through our proxy to avoid CORS
+        const proxyUrl = `/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`;
+        const response = await fetch(proxyUrl);
+        
         if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status}`);
+          const errText = await response.text().catch(() => response.statusText);
+          throw new Error(`Proxy fetch failed (${response.status}): ${errText}`);
         }
+        
         const pdfBytes = await response.arrayBuffer();
+        console.log(`[PdfRenderer] Got ${pdfBytes.byteLength} bytes`);
 
         if (cancelled) return;
 
-        // Step 2: Load pdfjs-dist
+        // Step 2: Load pdfjs-dist with locally-hosted worker
         const pdfjsLib = await import('pdfjs-dist');
-        
-        // Use CDN worker to avoid webpack bundling issues
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
-        // Step 3: Load the PDF from our fetched bytes (no external fetch needed by pdfjs)
-        const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+        // Step 3: Load PDF from raw bytes (no external fetch by pdfjs)
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) });
         const pdf = await loadingTask.promise;
+
+        console.log(`[PdfRenderer] PDF loaded, ${pdf.numPages} pages`);
 
         if (cancelled) return;
 
@@ -68,10 +81,11 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
           viewport: viewport,
         }).promise;
 
+        console.log(`[PdfRenderer] Page ${pageNumber} rendered successfully`);
         setLoading(false);
       } catch (err) {
         if (!cancelled) {
-          console.error('PDF render error for page', pageNumber, ':', err);
+          console.error(`[PdfRenderer] Error rendering page ${pageNumber}:`, err);
           setError(err.message || 'Failed to render');
           setLoading(false);
         }
@@ -87,9 +101,14 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-muted/30 rounded text-muted-foreground text-xs p-4 ${className}`}
-           title={error}>
-        <span>⚠ Could not load page {pageNumber}</span>
+      <div
+        className={`flex flex-col items-center justify-center bg-muted/30 rounded text-muted-foreground text-xs p-4 ${className}`}
+        style={{ minHeight: '150px' }}
+        title={error}
+      >
+        <span className="text-yellow-500 mb-1">⚠</span>
+        <span>Could not load image</span>
+        <span className="mt-1 opacity-50 text-[10px] max-w-[200px] text-center break-all">{error}</span>
       </div>
     );
   }
@@ -97,8 +116,11 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
   return (
     <div className={`relative ${className}`}>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded" style={{ minHeight: '200px' }}>
-          <div className="animate-spin h-6 w-6 border-2 border-electric-blue border-t-transparent rounded-full" />
+        <div className="flex items-center justify-center bg-muted/30 rounded" style={{ minHeight: '200px' }}>
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin h-6 w-6 border-2 border-electric-blue border-t-transparent rounded-full" />
+            <span className="text-xs text-muted-foreground">Loading page {pageNumber}...</span>
+          </div>
         </div>
       )}
       <canvas
