@@ -4,7 +4,7 @@ const nextConfig = {
     unoptimized: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['mongodb', 'pdf-parse', 'sharp', 'puppeteer', 'pdfkit', 'pdf2pic'],
+    serverComponentsExternalPackages: ['mongodb', 'pdf-parse', 'sharp', 'puppeteer', 'pdfkit', 'pdf2pic', '@sparticuz/chromium', 'puppeteer-core'],
   },
   webpack(config, { dev, isServer }) {
     if (dev) {
