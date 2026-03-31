@@ -9,9 +9,6 @@
         "build": "next build",
         "start": "next start"
     },
-    "engines": {
-        "node": "18.x"
-    },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.32.1",
         "@hookform/resolvers": "^5.1.1",
