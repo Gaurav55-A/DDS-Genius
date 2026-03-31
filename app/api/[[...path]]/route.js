@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { extractTextFromPDF, extractImagesFromPDF, parseThermalData, parseVisualObservations } from '@/lib/pdf-parser';
 import { matchObservationsWithThermal, generateAnalytics } from '@/lib/ai-matcher';
 import { generateDDRPDF } from '@/lib/pdf-generator';
+import { generateDDRPDFWithPuppeteer } from '@/lib/pdf-generator-puppeteer';
 
 // MongoDB connection
 let client;
@@ -308,7 +309,7 @@ async function handleRoute(request, { params }) {
     if (route === '/export-pdf' && method === 'POST') {
       try {
         const body = await request.json();
-        const { reportId } = body;
+        const { reportId, usePuppeteer = true } = body;
 
         if (!reportId) {
           return handleCORS(NextResponse.json(
@@ -326,8 +327,15 @@ async function handleRoute(request, { params }) {
           ));
         }
 
-        // Generate PDF
-        const pdfBuffer = await generateDDRPDF(report);
+        // Generate PDF using Puppeteer (high-fidelity) or pdfkit (legacy)
+        let pdfBuffer;
+        if (usePuppeteer) {
+          console.log('Generating PDF with Puppeteer...');
+          pdfBuffer = await generateDDRPDFWithPuppeteer(report, process.env.NEXT_PUBLIC_BASE_URL);
+        } else {
+          console.log('Generating PDF with pdfkit...');
+          pdfBuffer = await generateDDRPDF(report);
+        }
 
         // Return PDF as downloadable file
         return new NextResponse(pdfBuffer, {
