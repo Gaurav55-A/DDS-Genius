@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, BarChart3, Sparkles } from 'lucide-react';
+import { FileText, BarChart3, Zap, Sparkles, TrendingUp, Shield } from 'lucide-react';
 import UploadZone from '@/components/upload-zone';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
@@ -16,48 +17,50 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-6">
+      <header className="border-b border-minimal bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-2 rounded-lg">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="icon-glow-yellow p-2.5 rounded-lg">
+                <FileText className="h-6 w-6 text-electric-yellow" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">DDR Genius</h1>
-                <p className="text-sm text-slate-400">AI-Powered Diagnostic Reports</p>
+                <h1 className="text-2xl font-bold font-heading text-foreground">DDR Genius</h1>
+                <p className="text-xs text-muted-foreground font-body">Vibrant Industrial Edition</p>
               </div>
             </div>
-            <Button
-              onClick={() => router.push('/dashboard/analytics')}
-              variant="outline"
-              className="border-slate-600 text-slate-200 hover:bg-slate-800"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Analytics
-            </Button>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <Button
+                onClick={() => router.push('/dashboard/analytics')}
+                className="bg-electric-yellow hover:bg-electric-yellow/90 text-slate-950 font-medium"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Analytics
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-2 mb-6">
-            <Sparkles className="h-4 w-4 text-blue-400" />
-            <span className="text-sm text-blue-300">Powered by Claude 3.5 Sonnet AI</span>
+      <section className="container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-electric-blue/10 border border-electric-blue/20 rounded-full px-4 py-2 mb-6">
+            <Zap className="h-4 w-4 text-electric-blue" />
+            <span className="text-sm font-medium text-electric-blue font-body">Powered by Claude 3.5 Sonnet AI</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h2 className="text-5xl md:text-6xl font-bold font-heading text-foreground mb-6">
             Transform Raw Inspection Data
             <br />
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-electric-yellow via-electric-blue to-neon-teal bg-clip-text text-transparent">
               Into Professional Reports
             </span>
           </h2>
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-            Upload your property inspection PDFs and thermal images. Our AI automatically generates comprehensive Detailed Diagnosis Reports with intelligent data matching.
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-body">
+            Upload your property inspection PDFs and thermal images. Our AI automatically generates comprehensive Detailed Diagnosis Reports with intelligent conflict detection.
           </p>
         </div>
 
@@ -67,44 +70,77 @@ export default function Home() {
         </div>
 
         {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-16 max-w-5xl mx-auto">
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-            <div className="bg-blue-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <FileText className="h-6 w-6 text-blue-400" />
+        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
+          <div className="bg-card border-minimal rounded-lg p-6 hover:shadow-lg transition-all duration-200">
+            <div className="icon-glow-yellow h-12 w-12 rounded-lg flex items-center justify-center mb-4">
+              <FileText className="h-6 w-6 text-electric-yellow" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Smart PDF Parsing</h3>
-            <p className="text-slate-400 text-sm">
-              Automatically extracts visual observations, thermal readings, and images from your inspection PDFs.
+            <h3 className="text-lg font-semibold font-heading text-foreground mb-2">Smart PDF Parsing</h3>
+            <p className="text-muted-foreground text-sm font-body">
+              Automatically extracts visual observations, thermal readings, and images from your inspection PDFs with high precision.
             </p>
           </div>
 
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-            <div className="bg-cyan-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <Sparkles className="h-6 w-6 text-cyan-400" />
+          <div className="bg-card border-minimal rounded-lg p-6 hover:shadow-lg transition-all duration-200">
+            <div className="icon-glow-blue h-12 w-12 rounded-lg flex items-center justify-center mb-4">
+              <Sparkles className="h-6 w-6 text-electric-blue" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">AI Data Matching</h3>
-            <p className="text-slate-400 text-sm">
-              Claude AI intelligently matches thermal readings with visual observations by room/area with conflict detection.
+            <h3 className="text-lg font-semibold font-heading text-foreground mb-2">AI Data Matching</h3>
+            <p className="text-muted-foreground text-sm font-body">
+              Claude AI intelligently matches thermal readings with visual observations, detecting conflicts and sub-surface issues.
             </p>
           </div>
 
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
-            <div className="bg-purple-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <BarChart3 className="h-6 w-6 text-purple-400" />
+          <div className="bg-card border-minimal rounded-lg p-6 hover:shadow-lg transition-all duration-200">
+            <div className="icon-glow-teal h-12 w-12 rounded-lg flex items-center justify-center mb-4">
+              <TrendingUp className="h-6 w-6 text-neon-teal" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Analytics Dashboard</h3>
-            <p className="text-slate-400 text-sm">
-              Visualize defect patterns, temperature distributions, and severity trends across all reports.
+            <h3 className="text-lg font-semibold font-heading text-foreground mb-2">Analytics Dashboard</h3>
+            <p className="text-muted-foreground text-sm font-body">
+              Visualize defect patterns, temperature distributions, and health indexes across all reports with vibrant charts.
             </p>
+          </div>
+        </div>
+
+        {/* Design Highlights */}
+        <div className="mt-20 bg-card border-2 border-electric-yellow/20 rounded-lg p-8 max-w-5xl mx-auto">
+          <div className="flex items-start gap-4">
+            <div className="icon-glow-yellow h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Shield className="h-6 w-6 text-electric-yellow" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold font-heading text-foreground mb-2">Vibrant Industrial Design System</h3>
+              <p className="text-muted-foreground font-body mb-4">
+                Experience the new design architecture built for visibility and precision:
+              </p>
+              <div className="grid md:grid-cols-2 gap-4 text-sm font-body">
+                <div className="flex items-start gap-2">
+                  <span className="text-electric-yellow font-bold mt-0.5">●</span>
+                  <span><strong className="text-electric-yellow">Electric Yellow</strong> - Primary brand color representing UrbanRoof energy and visibility</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-electric-blue font-bold mt-0.5">●</span>
+                  <span><strong className="text-electric-blue">Electric Blue</strong> - Technical data and AI engine indicators</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-neon-teal font-bold mt-0.5">●</span>
+                  <span><strong className="text-neon-teal">Neon Teal</strong> - Health index and positive status</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-bright-rose font-bold mt-0.5">●</span>
+                  <span><strong className="text-bright-rose">Bright Rose</strong> - Critical conflicts requiring attention</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700 mt-20">
+      <footer className="border-t border-minimal mt-20">
         <div className="container mx-auto px-4 py-6">
-          <p className="text-center text-slate-400 text-sm">
-            DDR Genius © 2024 | Built with Next.js, MongoDB & Claude AI
+          <p className="text-center text-muted-foreground text-sm font-body">
+            DDR Genius © 2024 | Vibrant Industrial Design | Built with Next.js, MongoDB & Claude AI
           </p>
         </div>
       </footer>

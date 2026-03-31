@@ -3,7 +3,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+// Vibrant Industrial Color Palette
+const VIBRANT_COLORS = ['#FACC15', '#3B82F6', '#2DD4BF', '#A78BFA', '#F59E0B', '#FB7185'];
 
 export function IssueDistributionChart({ data }) {
   const chartData = Object.entries(data || {}).map(([name, value]) => ({
@@ -12,10 +13,10 @@ export function IssueDistributionChart({ data }) {
   }));
 
   return (
-    <Card>
+    <Card className="border-minimal">
       <CardHeader>
-        <CardTitle>Issue Distribution</CardTitle>
-        <CardDescription>Types of defects found across all inspections</CardDescription>
+        <CardTitle className="font-heading">Issue Distribution</CardTitle>
+        <CardDescription className="font-body">Types of defects found across all inspections</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -31,10 +32,16 @@ export function IssueDistributionChart({ data }) {
               dataKey="value"
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={VIBRANT_COLORS[index % VIBRANT_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--card))', 
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px'
+              }}
+            />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
@@ -50,75 +57,50 @@ export function TemperatureAnalysisChart({ data }) {
   }));
 
   return (
-    <Card>
+    <Card className="border-minimal">
       <CardHeader>
-        <CardTitle>Temperature Analysis</CardTitle>
-        <CardDescription>Thermal readings across different areas</CardDescription>
+        <CardTitle className="font-heading">Temperature Analysis</CardTitle>
+        <CardDescription className="font-body">Thermal readings across different areas</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="area" />
-            <YAxis label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft' }} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="hotspot" fill="#FF8042" name="Hotspot" />
-            <Bar dataKey="coldspot" fill="#0088FE" name="Coldspot" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="area" 
+              stroke="hsl(var(--muted-foreground))"
+              style={{ fontSize: '12px', fontFamily: 'Inter, sans-serif' }}
+            />
+            <YAxis 
+              label={{ 
+                value: 'Temperature (°C)', 
+                angle: -90, 
+                position: 'insideLeft',
+                style: { fontFamily: 'Inter, sans-serif' }
+              }}
+              stroke="hsl(var(--muted-foreground))"
+              style={{ fontSize: '12px', fontFamily: 'Inter, sans-serif' }}
+            />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--card))', 
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                fontFamily: 'Inter, sans-serif'
+              }}
+            />
+            <Legend 
+              wrapperStyle={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px'
+              }}
+            />
+            <Bar dataKey="hotspot" fill="#F59E0B" name="Hotspot" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="coldspot" fill="#3B82F6" name="Coldspot" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  );
-}
-
-export function SummaryStats({ analytics }) {
-  const stats = [
-    {
-      title: 'Total Areas Inspected',
-      value: analytics?.totalAreas || 0,
-      description: 'Distinct areas analyzed',
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'Total Defects Found',
-      value: analytics?.totalDefects || 0,
-      description: 'Issues identified',
-      color: 'bg-orange-500'
-    },
-    {
-      title: 'Avg Hotspot Temp',
-      value: `${(analytics?.temperatureStats?.avgHotspot || 0).toFixed(1)}°C`,
-      description: 'Average maximum temperature',
-      color: 'bg-red-500'
-    },
-    {
-      title: 'Avg Coldspot Temp',
-      value: `${(analytics?.temperatureStats?.avgColdspot || 0).toFixed(1)}°C`,
-      description: 'Average minimum temperature',
-      color: 'bg-cyan-500'
-    },
-  ];
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat, index) => (
-        <Card key={index}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {stat.title}
-            </CardTitle>
-            <div className={`h-4 w-4 rounded-full ${stat.color}`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
-            <p className="text-xs text-muted-foreground">
-              {stat.description}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
   );
 }
 
@@ -128,21 +110,50 @@ export function SeverityChart({ data }) {
     value
   }));
 
+  const severityColors = {
+    'Minor': '#2DD4BF',
+    'Moderate': '#F59E0B', 
+    'Severe': '#FB7185'
+  };
+
   return (
-    <Card>
+    <Card className="border-minimal">
       <CardHeader>
-        <CardTitle>Severity Distribution</CardTitle>
-        <CardDescription>Classification of issues by severity</CardDescription>
+        <CardTitle className="font-heading">Severity Distribution</CardTitle>
+        <CardDescription className="font-body">Classification of issues by severity</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="value" fill="#8884d8" name="Count" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="name" 
+              stroke="hsl(var(--muted-foreground))"
+              style={{ fontSize: '12px', fontFamily: 'Inter, sans-serif' }}
+            />
+            <YAxis 
+              stroke="hsl(var(--muted-foreground))"
+              style={{ fontSize: '12px', fontFamily: 'Inter, sans-serif' }}
+            />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--card))', 
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                fontFamily: 'Inter, sans-serif'
+              }}
+            />
+            <Legend 
+              wrapperStyle={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px'
+              }}
+            />
+            <Bar dataKey="value" fill="#8884d8" name="Count" radius={[4, 4, 0, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={severityColors[entry.name] || '#8884d8'} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
