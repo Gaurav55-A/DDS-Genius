@@ -119,19 +119,18 @@ async function handleRoute(request, { params }) {
           inspector: 'DDR Genius AI'
         };
 
-        // Save to database
+        // Save to database (use snake_case for Supabase/PostgreSQL compatibility)
         const reportDoc = {
-          reportId,
-          propertyInfo,
-          visualObservations,
-          thermalReadings,
-          sampleImages,
-          thermalImages: thermalImagesExtracted,
-          mergedData,
-          analytics,
-          status: 'completed',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          reportid: reportId,  // lowercase for PostgreSQL
+          propertyinfo: propertyInfo,
+          visualobservations: visualObservations,
+          thermalreadings: thermalReadings,
+          sampleimages: sampleImages,
+          thermalimages: thermalImagesExtracted,
+          mergeddata: mergedData,
+          analytics: analytics,
+          status: 'completed'
+          // createdAt and updatedAt handled by database DEFAULT NOW()
         };
 
         // Save to Supabase
@@ -167,7 +166,7 @@ async function handleRoute(request, { params }) {
       const { data: reports, error } = await supabase
         .from('reports')
         .select('*')
-        .order('createdAt', { ascending: false })
+        .order('createdat', { ascending: false })  // lowercase column name
         .limit(100);
 
       if (error) {
@@ -177,7 +176,22 @@ async function handleRoute(request, { params }) {
         ));
       }
 
-      return handleCORS(NextResponse.json(reports || []));
+      // Convert snake_case to camelCase for frontend
+      const cleanReports = (reports || []).map(report => ({
+        reportId: report.reportid,
+        propertyInfo: report.propertyinfo,
+        visualObservations: report.visualobservations,
+        thermalReadings: report.thermalreadings,
+        sampleImages: report.sampleimages,
+        thermalImages: report.thermalimages,
+        mergedData: report.mergeddata,
+        analytics: report.analytics,
+        status: report.status,
+        createdAt: report.createdat,
+        updatedAt: report.updatedat
+      }));
+
+      return handleCORS(NextResponse.json(cleanReports));
     }
 
     // GET /api/reports/:id - Get specific report
@@ -187,7 +201,7 @@ async function handleRoute(request, { params }) {
       const { data: report, error } = await supabase
         .from('reports')
         .select('*')
-        .eq('reportId', reportId)
+        .eq('reportid', reportId)  // lowercase column name
         .single();
 
       if (error || !report) {
@@ -197,7 +211,22 @@ async function handleRoute(request, { params }) {
         ));
       }
 
-      return handleCORS(NextResponse.json(report));
+      // Convert snake_case to camelCase for frontend compatibility
+      const cleanReport = {
+        reportId: report.reportid,
+        propertyInfo: report.propertyinfo,
+        visualObservations: report.visualobservations,
+        thermalReadings: report.thermalreadings,
+        sampleImages: report.sampleimages,
+        thermalImages: report.thermalimages,
+        mergedData: report.mergeddata,
+        analytics: report.analytics,
+        status: report.status,
+        createdAt: report.createdat,
+        updatedAt: report.updatedat
+      };
+
+      return handleCORS(NextResponse.json(cleanReport));
     }
 
     // GET /api/analytics - Get aggregated analytics
@@ -332,7 +361,7 @@ async function handleRoute(request, { params }) {
         const { data: report, error } = await supabase
           .from('reports')
           .select('*')
-          .eq('reportId', reportId)
+          .eq('reportid', reportId)  // lowercase column name
           .single();
 
         if (error || !report) {
@@ -342,14 +371,27 @@ async function handleRoute(request, { params }) {
           ));
         }
 
+        // Convert to camelCase for PDF generator
+        const cleanReport = {
+          reportId: report.reportid,
+          propertyInfo: report.propertyinfo,
+          visualObservations: report.visualobservations,
+          thermalReadings: report.thermalreadings,
+          sampleImages: report.sampleimages,
+          thermalImages: report.thermalimages,
+          mergedData: report.mergeddata,
+          analytics: report.analytics,
+          status: report.status
+        };
+
         // Generate PDF using Puppeteer (high-fidelity) or pdfkit (legacy)
         let pdfBuffer;
         if (usePuppeteer) {
           console.log('Generating PDF with Puppeteer...');
-          pdfBuffer = await generateDDRPDFWithPuppeteer(report, process.env.NEXT_PUBLIC_BASE_URL);
+          pdfBuffer = await generateDDRPDFWithPuppeteer(cleanReport, process.env.NEXT_PUBLIC_BASE_URL);
         } else {
           console.log('Generating PDF with pdfkit...');
-          pdfBuffer = await generateDDRPDF(report);
+          pdfBuffer = await generateDDRPDF(cleanReport);
         }
 
         // Return PDF as downloadable file
