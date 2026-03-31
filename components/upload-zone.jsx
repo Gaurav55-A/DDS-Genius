@@ -106,10 +106,7 @@ export default function UploadZone({ onUploadComplete }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4 justify-center">
-            <Button onClick={() => window.location.href = `/report/${reportId}`}>
-              View Report
-            </Button>
-            <Button onClick={() => window.location.href = `/dashboard/analytics`} variant="outline">
+            <Button onClick={() => window.location.href = `/dashboard/analytics`}>
               View Analytics
             </Button>
             <Button onClick={handleReset} variant="ghost">
