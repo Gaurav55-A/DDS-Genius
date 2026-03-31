@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Activity, AlertTriangle, Thermometer, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Loader2, Activity, AlertTriangle, Thermometer, TrendingUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { KPICard } from '@/components/kpi-card';
@@ -14,6 +14,7 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
@@ -34,6 +35,51 @@ export default function AnalyticsPage() {
     }
   };
 
+  const handleExportReport = async () => {
+    try {
+      setExporting(true);
+      toast.info('Generating DDR report...');
+
+      // Get the latest report
+      const reportsResponse = await fetch('/api/reports');
+      if (!reportsResponse.ok) throw new Error('No reports found');
+      
+      const reports = await reportsResponse.json();
+      if (reports.length === 0) {
+        toast.error('No reports available to export');
+        return;
+      }
+
+      const latestReport = reports[0];
+
+      // Generate PDF
+      const exportResponse = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId: latestReport.reportId })
+      });
+
+      if (!exportResponse.ok) throw new Error('Export failed');
+
+      const blob = await exportResponse.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DDR_Report_${latestReport.reportId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Report exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(error.message || 'Failed to export report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -45,7 +91,6 @@ export default function AnalyticsPage() {
     );
   }
 
-  // Sample conflicts for demonstration (in production, this would come from backend)
   const sampleConflicts = analytics?.totalReports > 0 ? [
     {
       area: 'Hallway Skirting',
@@ -71,6 +116,25 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle />
+              {analytics?.totalReports > 0 && (
+                <Button
+                  onClick={handleExportReport}
+                  disabled={exporting}
+                  className="bg-electric-yellow hover:bg-electric-yellow/90 text-slate-950 font-medium"
+                >
+                  {exporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export Report
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 onClick={() => router.push('/')}
                 variant="outline"
@@ -175,6 +239,15 @@ export default function AnalyticsPage() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-minimal mt-20">
+        <div className="container mx-auto px-4 py-6">
+          <p className="text-center text-muted-foreground text-sm font-body">
+            Made by Gaurav Agrawal
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

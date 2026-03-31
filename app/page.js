@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, BarChart3, Zap, Sparkles, TrendingUp, Shield } from 'lucide-react';
+import { FileText, BarChart3, Sparkles, TrendingUp } from 'lucide-react';
 import UploadZone from '@/components/upload-zone';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold font-heading text-foreground">DDR Genius</h1>
-                <p className="text-xs text-muted-foreground font-body">Vibrant Industrial Edition</p>
+                <p className="text-xs text-muted-foreground font-body">AI-Powered Diagnostic Reports</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -48,10 +48,6 @@ export default function Home() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-electric-blue/10 border border-electric-blue/20 rounded-full px-4 py-2 mb-6">
-            <Zap className="h-4 w-4 text-electric-blue" />
-            <span className="text-sm font-medium text-electric-blue font-body">Powered by Claude 3.5 Sonnet AI</span>
-          </div>
           <h2 className="text-5xl md:text-6xl font-bold font-heading text-foreground mb-6">
             Transform Raw Inspection Data
             <br />
@@ -87,7 +83,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-semibold font-heading text-foreground mb-2">AI Data Matching</h3>
             <p className="text-muted-foreground text-sm font-body">
-              Claude AI intelligently matches thermal readings with visual observations, detecting conflicts and sub-surface issues.
+              AI intelligently matches thermal readings with visual observations, detecting conflicts and sub-surface issues.
             </p>
           </div>
 
@@ -101,46 +97,13 @@ export default function Home() {
             </p>
           </div>
         </div>
-
-        {/* Design Highlights */}
-        <div className="mt-20 bg-card border-2 border-electric-yellow/20 rounded-lg p-8 max-w-5xl mx-auto">
-          <div className="flex items-start gap-4">
-            <div className="icon-glow-yellow h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Shield className="h-6 w-6 text-electric-yellow" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold font-heading text-foreground mb-2">Vibrant Industrial Design System</h3>
-              <p className="text-muted-foreground font-body mb-4">
-                Experience the new design architecture built for visibility and precision:
-              </p>
-              <div className="grid md:grid-cols-2 gap-4 text-sm font-body">
-                <div className="flex items-start gap-2">
-                  <span className="text-electric-yellow font-bold mt-0.5">●</span>
-                  <span><strong className="text-electric-yellow">Electric Yellow</strong> - Primary brand color representing UrbanRoof energy and visibility</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-electric-blue font-bold mt-0.5">●</span>
-                  <span><strong className="text-electric-blue">Electric Blue</strong> - Technical data and AI engine indicators</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-neon-teal font-bold mt-0.5">●</span>
-                  <span><strong className="text-neon-teal">Neon Teal</strong> - Health index and positive status</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-bright-rose font-bold mt-0.5">●</span>
-                  <span><strong className="text-bright-rose">Bright Rose</strong> - Critical conflicts requiring attention</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-minimal mt-20">
         <div className="container mx-auto px-4 py-6">
           <p className="text-center text-muted-foreground text-sm font-body">
-            DDR Genius © 2024 | Vibrant Industrial Design | Built with Next.js, MongoDB & Claude AI
+            Made by Gaurav Agrawal
           </p>
         </div>
       </footer>

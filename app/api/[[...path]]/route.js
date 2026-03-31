@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
 import { extractTextFromPDF, extractImagesFromPDF, parseThermalData, parseVisualObservations } from '@/lib/pdf-parser';
 import { matchObservationsWithThermal, generateAnalytics } from '@/lib/ai-matcher';
+import { generateDDRPDF } from '@/lib/pdf-generator';
 
 // MongoDB connection
 let client;
@@ -301,6 +302,49 @@ async function handleRoute(request, { params }) {
       }
 
       return handleCORS(NextResponse.json(aggregatedAnalytics));
+    }
+
+    // POST /api/export-pdf - Generate and download DDR PDF
+    if (route === '/export-pdf' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { reportId } = body;
+
+        if (!reportId) {
+          return handleCORS(NextResponse.json(
+            { error: 'reportId is required' },
+            { status: 400 }
+          ));
+        }
+
+        const report = await db.collection('reports').findOne({ reportId });
+
+        if (!report) {
+          return handleCORS(NextResponse.json(
+            { error: 'Report not found' },
+            { status: 404 }
+          ));
+        }
+
+        // Generate PDF
+        const pdfBuffer = await generateDDRPDF(report);
+
+        // Return PDF as downloadable file
+        return new NextResponse(pdfBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="DDR_Report_${reportId}.pdf"`,
+            'Access-Control-Allow-Origin': process.env.CORS_ORIGINS || '*'
+          }
+        });
+
+      } catch (error) {
+        console.error('PDF export error:', error);
+        return handleCORS(NextResponse.json(
+          { error: 'Failed to generate PDF: ' + error.message },
+          { status: 500 }
+        ));
+      }
     }
 
     // Route not found
