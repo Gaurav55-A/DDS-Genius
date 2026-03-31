@@ -232,6 +232,182 @@ export default function ReportDetailPage() {
           />
         )}
 
+        {/* Analytics Dashboard */}
+        {analytics && (
+          <Card className="border-minimal">
+            <CardHeader>
+              <CardTitle className="font-heading">Inspection Analytics</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-electric-blue/10 border border-electric-blue/30 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-electric-blue">{analytics.totalAreas || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total Areas</p>
+                </div>
+                <div className="bg-vivid-amber/10 border border-vivid-amber/30 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-vivid-amber">{analytics.totalDefects || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total Defects</p>
+                </div>
+                <div className="bg-bright-rose/10 border border-bright-rose/30 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-bright-rose">{analytics.totalConflicts || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Data Conflicts</p>
+                </div>
+                <div className="bg-neon-teal/10 border border-neon-teal/30 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-neon-teal">
+                    {mergedData?.severityAssessment?.overall || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Overall Severity</p>
+                </div>
+              </div>
+
+              {/* Issue Distribution + Severity Distribution */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Issue Distribution */}
+                {analytics.issueDistribution && Object.keys(analytics.issueDistribution).length > 0 && (
+                  <div className="bg-muted/20 rounded-lg p-4">
+                    <h4 className="font-semibold text-sm font-heading mb-3">Issue Distribution</h4>
+                    <div className="space-y-2">
+                      {Object.entries(analytics.issueDistribution)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([type, count]) => {
+                          const total = analytics.totalDefects || 1;
+                          const pct = Math.round((count / total) * 100);
+                          return (
+                            <div key={type}>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-foreground font-medium">{type}</span>
+                                <span className="text-muted-foreground">{count} ({pct}%)</span>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-2">
+                                <div
+                                  className="bg-electric-blue rounded-full h-2 transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Severity Distribution */}
+                {analytics.severityDistribution && (
+                  <div className="bg-muted/20 rounded-lg p-4">
+                    <h4 className="font-semibold text-sm font-heading mb-3">Severity Distribution</h4>
+                    <div className="space-y-2">
+                      {[
+                        { key: 'Minor', color: 'bg-neon-teal', textColor: 'text-neon-teal' },
+                        { key: 'Moderate', color: 'bg-vivid-amber', textColor: 'text-vivid-amber' },
+                        { key: 'Severe', color: 'bg-bright-rose', textColor: 'text-bright-rose' },
+                      ].map(({ key, color, textColor }) => {
+                        const count = analytics.severityDistribution[key] || 0;
+                        const total = analytics.totalDefects || 1;
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={key}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className={`font-medium ${textColor}`}>{key}</span>
+                              <span className="text-muted-foreground">{count} ({pct}%)</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div
+                                className={`${color} rounded-full h-2 transition-all`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Temperature Statistics */}
+              {analytics.temperatureStats && analytics.temperatureStats.readings?.length > 0 && (
+                <div className="bg-muted/20 rounded-lg p-4">
+                  <h4 className="font-semibold text-sm font-heading mb-3">Temperature Analysis</h4>
+                  
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div className="bg-background/50 rounded p-3 text-center">
+                      <p className="text-lg font-bold text-bright-rose">
+                        {analytics.temperatureStats.maxHotspot?.toFixed(1) || '—'}°C
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Max Hotspot</p>
+                    </div>
+                    <div className="bg-background/50 rounded p-3 text-center">
+                      <p className="text-lg font-bold text-electric-blue">
+                        {analytics.temperatureStats.minColdspot < 100 ? analytics.temperatureStats.minColdspot?.toFixed(1) : '—'}°C
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Min Coldspot</p>
+                    </div>
+                    <div className="bg-background/50 rounded p-3 text-center">
+                      <p className="text-lg font-bold text-vivid-amber">
+                        {analytics.temperatureStats.avgHotspot?.toFixed(1) || '—'}°C
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Avg Hotspot</p>
+                    </div>
+                    <div className="bg-background/50 rounded p-3 text-center">
+                      <p className="text-lg font-bold text-neon-teal">
+                        {analytics.temperatureStats.avgColdspot?.toFixed(1) || '—'}°C
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Avg Coldspot</p>
+                    </div>
+                  </div>
+
+                  {/* Per-Area Temperature Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-2 px-2 text-muted-foreground font-medium">Area</th>
+                          <th className="text-right py-2 px-2 text-muted-foreground font-medium">Hotspot</th>
+                          <th className="text-right py-2 px-2 text-muted-foreground font-medium">Coldspot</th>
+                          <th className="text-right py-2 px-2 text-muted-foreground font-medium">Delta</th>
+                          <th className="text-center py-2 px-2 text-muted-foreground font-medium">Risk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.temperatureStats.readings.map((reading, idx) => {
+                          const delta = reading.hotspot && reading.coldspot
+                            ? (reading.hotspot - reading.coldspot).toFixed(1)
+                            : null;
+                          const isHighRisk = reading.coldspot && reading.coldspot < 22;
+                          const isDeltaRisk = delta && parseFloat(delta) > 5;
+                          return (
+                            <tr key={idx} className="border-b border-border/50">
+                              <td className="py-2 px-2 font-medium text-foreground">{reading.area}</td>
+                              <td className="py-2 px-2 text-right text-bright-rose">
+                                {reading.hotspot?.toFixed(1) || '—'}°C
+                              </td>
+                              <td className="py-2 px-2 text-right text-electric-blue">
+                                {reading.coldspot?.toFixed(1) || '—'}°C
+                              </td>
+                              <td className={`py-2 px-2 text-right font-medium ${isDeltaRisk ? 'text-vivid-amber' : 'text-foreground'}`}>
+                                {delta ? `${delta}°C` : '—'}
+                              </td>
+                              <td className="py-2 px-2 text-center">
+                                {isHighRisk || isDeltaRisk ? (
+                                  <span className="inline-block w-2 h-2 rounded-full bg-bright-rose" title="High risk" />
+                                ) : (
+                                  <span className="inline-block w-2 h-2 rounded-full bg-neon-teal" title="Normal" />
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Area-wise Observations */}
         <Card className="border-minimal">
           <CardHeader>
