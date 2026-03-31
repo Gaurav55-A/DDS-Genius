@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * Renders a specific page from a PDF URL using pdfjs-dist (pure JS, works in browser).
- * No native dependencies required - this runs entirely client-side.
+ * Fetches the PDF as raw bytes first to avoid CORS issues with cross-origin URLs.
  */
 export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', className = '' }) {
   const canvasRef = useRef(null);
@@ -14,7 +14,7 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
   useEffect(() => {
     if (!pdfUrl || !pageNumber) {
       setLoading(false);
-      setError('No PDF URL or page number provided');
+      setError('No PDF URL or page number');
       return;
     }
 
@@ -25,31 +25,35 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
         setLoading(true);
         setError(null);
 
-        // Dynamically import pdfjs-dist (client-side only)
+        // Step 1: Fetch the PDF as raw bytes ourselves (avoids CORS issues)
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status}`);
+        }
+        const pdfBytes = await response.arrayBuffer();
+
+        if (cancelled) return;
+
+        // Step 2: Load pdfjs-dist
         const pdfjsLib = await import('pdfjs-dist');
         
-        // Set worker source to CDN (avoids bundling issues)
+        // Use CDN worker to avoid webpack bundling issues
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
-        // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        // Step 3: Load the PDF from our fetched bytes (no external fetch needed by pdfjs)
+        const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
         const pdf = await loadingTask.promise;
 
         if (cancelled) return;
 
-        // Check page number is valid
         if (pageNumber < 1 || pageNumber > pdf.numPages) {
-          setError(`Page ${pageNumber} not found (PDF has ${pdf.numPages} pages)`);
-          setLoading(false);
-          return;
+          throw new Error(`Page ${pageNumber} out of range (1-${pdf.numPages})`);
         }
 
-        // Get the specific page
         const page = await pdf.getPage(pageNumber);
 
         if (cancelled) return;
 
-        // Render to canvas
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -67,8 +71,8 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
         setLoading(false);
       } catch (err) {
         if (!cancelled) {
-          console.error('PDF render error:', err);
-          setError(err.message || 'Failed to render PDF page');
+          console.error('PDF render error for page', pageNumber, ':', err);
+          setError(err.message || 'Failed to render');
           setLoading(false);
         }
       }
@@ -83,8 +87,9 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-muted/30 rounded text-muted-foreground text-sm p-4 ${className}`}>
-        <span>{alt} - Page {pageNumber}</span>
+      <div className={`flex items-center justify-center bg-muted/30 rounded text-muted-foreground text-xs p-4 ${className}`}
+           title={error}>
+        <span>⚠ Could not load page {pageNumber}</span>
       </div>
     );
   }
@@ -92,7 +97,7 @@ export default function PdfPageRenderer({ pdfUrl, pageNumber, alt = 'PDF page', 
   return (
     <div className={`relative ${className}`}>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded" style={{ minHeight: '200px' }}>
           <div className="animate-spin h-6 w-6 border-2 border-electric-blue border-t-transparent rounded-full" />
         </div>
       )}
