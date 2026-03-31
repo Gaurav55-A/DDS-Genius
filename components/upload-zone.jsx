@@ -3,11 +3,19 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, Thermometer, Loader2, CheckCircle2, Eye } from 'lucide-react';
+import { Upload, FileText, Thermometer, Loader2, CheckCircle2, Eye, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel limit
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
 
 export default function UploadZone({ onUploadSuccess, processedReportId }) {
   const router = useRouter();
@@ -16,19 +24,24 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingStep, setProcessingStep] = useState('');
+  const [sizeWarning, setSizeWarning] = useState(null);
   const [reportId, setReportId] = useState(null);
 
   const onDropSample = useCallback((acceptedFiles) => {
     if (acceptedFiles?.[0]) {
-      setSampleReport(acceptedFiles[0]);
-      toast.success('Sample Report uploaded');
+      const file = acceptedFiles[0];
+      setSizeWarning(null);
+      setSampleReport(file);
+      toast.success(`Sample Report uploaded (${formatFileSize(file.size)})`);
     }
   }, []);
 
   const onDropThermal = useCallback((acceptedFiles) => {
     if (acceptedFiles?.[0]) {
-      setThermalImages(acceptedFiles[0]);
-      toast.success('Thermal Images uploaded');
+      const file = acceptedFiles[0];
+      setSizeWarning(null);
+      setThermalImages(file);
+      toast.success(`Thermal Images uploaded (${formatFileSize(file.size)})`);
     }
   }, []);
 
@@ -47,6 +60,16 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
   const handleProcess = async () => {
     if (!sampleReport || !thermalImages) {
       toast.error('Please upload both files');
+      return;
+    }
+
+    // Check combined size against Vercel's 4.5MB request body limit
+    const combinedSize = sampleReport.size + thermalImages.size;
+    if (combinedSize > MAX_FILE_SIZE) {
+      setSizeWarning(
+        `Combined file size is ${formatFileSize(combinedSize)} — exceeds the 4.5 MB limit. Please compress one or both PDFs.`
+      );
+      toast.error(`Combined size (${formatFileSize(combinedSize)}) exceeds 4.5 MB limit.`);
       return;
     }
 
@@ -218,6 +241,45 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
+      {/* Upload Limit Info Banner */}
+      <div className="bg-vivid-amber/10 border border-vivid-amber/30 rounded-lg p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-vivid-amber flex-shrink-0 mt-0.5" />
+        <div className="text-sm font-body">
+          <p className="text-foreground font-medium">Upload Limit: 4.5 MB combined</p>
+          <p className="text-muted-foreground mt-1">
+            Both PDFs combined must be under 4.5 MB. If your files are larger, please compress them first.
+          </p>
+          <a
+            href="https://www.ilovepdf.com/compress_pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-2 text-electric-blue hover:text-electric-blue/80 font-medium transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Compress your PDF at iLovePDF.com
+          </a>
+        </div>
+      </div>
+
+      {/* Size Warning Alert */}
+      {sizeWarning && (
+        <div className="bg-bright-rose/10 border border-bright-rose/30 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-bright-rose flex-shrink-0 mt-0.5" />
+          <div className="text-sm font-body">
+            <p className="text-bright-rose font-medium">{sizeWarning}</p>
+            <a
+              href="https://www.ilovepdf.com/compress_pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-2 text-electric-blue hover:text-electric-blue/80 font-medium transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Compress it now →
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Sample Report Upload */}
         <Card>
@@ -238,13 +300,19 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
               <input {...getSampleInputProps()} />
               <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               {sampleReport ? (
-                <p className="text-sm font-medium text-green-600 dark:text-green-400 font-body">
-                  ✓ {sampleReport.name}
-                </p>
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 font-body">
+                    ✓ {sampleReport.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatFileSize(sampleReport.size)}</p>
+                </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400 font-body">
-                  {isSampleDragActive ? 'Drop the file here' : 'Drag & drop or click to upload'}
-                </p>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-body">
+                    {isSampleDragActive ? 'Drop the file here' : 'Drag & drop or click to upload'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF only · Max 4.5 MB</p>
+                </div>
               )}
             </div>
           </CardContent>
@@ -269,13 +337,19 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
               <input {...getThermalInputProps()} />
               <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               {thermalImages ? (
-                <p className="text-sm font-medium text-green-600 dark:text-green-400 font-body">
-                  ✓ {thermalImages.name}
-                </p>
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 font-body">
+                    ✓ {thermalImages.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatFileSize(thermalImages.size)}</p>
+                </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400 font-body">
-                  {isThermalDragActive ? 'Drop the file here' : 'Drag & drop or click to upload'}
-                </p>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-body">
+                    {isThermalDragActive ? 'Drop the file here' : 'Drag & drop or click to upload'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF only · Max 4.5 MB</p>
+                </div>
               )}
             </div>
           </CardContent>
