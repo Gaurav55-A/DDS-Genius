@@ -1,24 +1,10 @@
-import { MongoClient } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 import { extractTextFromPDF, extractImagesFromPDF, parseThermalData, parseVisualObservations } from '@/lib/pdf-parser';
 import { matchObservationsWithThermal, generateAnalytics } from '@/lib/ai-matcher';
 import { generateDDRPDF } from '@/lib/pdf-generator';
 import { generateDDRPDFWithPuppeteer } from '@/lib/pdf-generator-puppeteer';
-
-// MongoDB connection
-let client;
-let db;
-
-async function connectToMongo() {
-  if (!client) {
-    client = new MongoClient(process.env.MONGO_URL);
-    await client.connect();
-    db = client.db(process.env.DB_NAME);
-    console.log('Connected to MongoDB:', process.env.DB_NAME);
-  }
-  return db;
-}
 
 // Helper function to handle CORS
 function handleCORS(response) {
@@ -41,14 +27,13 @@ async function handleRoute(request, { params }) {
   const method = request.method;
 
   try {
-    const db = await connectToMongo();
-
     // Root endpoint
     if ((route === '/root' || route === '/') && method === 'GET') {
       return handleCORS(NextResponse.json({ 
         message: "DDR Genius API",
         version: "1.0.0",
-        endpoints: ['/process', '/reports', '/analytics']
+        endpoints: ['/process', '/reports', '/analytics'],
+        database: "Supabase"
       }));
     }
 
@@ -149,9 +134,17 @@ async function handleRoute(request, { params }) {
           updatedAt: new Date()
         };
 
-        await db.collection('reports').insertOne(reportDoc);
+        // Save to Supabase
+        const { data, error } = await supabase
+          .from('reports')
+          .insert([reportDoc])
+          .select();
 
-        console.log('Report saved successfully:', reportId);
+        if (error) {
+          throw new Error('Failed to save report to Supabase: ' + error.message);
+        }
+
+        console.log('Report saved successfully to Supabase:', reportId);
 
         return handleCORS(NextResponse.json({
           reportId,
@@ -171,39 +164,57 @@ async function handleRoute(request, { params }) {
 
     // GET /api/reports - Get all reports
     if (route === '/reports' && method === 'GET') {
-      const reports = await db.collection('reports')
-        .find({})
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .toArray();
+      const { data: reports, error } = await supabase
+        .from('reports')
+        .select('*')
+        .order('createdAt', { ascending: false })
+        .limit(100);
 
-      const cleanReports = reports.map(({ _id, ...rest }) => rest);
-      return handleCORS(NextResponse.json(cleanReports));
+      if (error) {
+        return handleCORS(NextResponse.json(
+          { error: 'Failed to fetch reports: ' + error.message },
+          { status: 500 }
+        ));
+      }
+
+      return handleCORS(NextResponse.json(reports || []));
     }
 
     // GET /api/reports/:id - Get specific report
     if (route.startsWith('/reports/') && method === 'GET') {
       const reportId = path[1];
-      const report = await db.collection('reports').findOne({ reportId });
+      
+      const { data: report, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('reportId', reportId)
+        .single();
 
-      if (!report) {
+      if (error || !report) {
         return handleCORS(NextResponse.json(
           { error: 'Report not found' },
           { status: 404 }
         ));
       }
 
-      const { _id, ...cleanReport } = report;
-      return handleCORS(NextResponse.json(cleanReport));
+      return handleCORS(NextResponse.json(report));
     }
 
     // GET /api/analytics - Get aggregated analytics
     if (route === '/analytics' && method === 'GET') {
-      const reports = await db.collection('reports')
-        .find({ status: 'completed' })
-        .toArray();
+      const { data: reports, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('status', 'completed');
 
-      if (reports.length === 0) {
+      if (error) {
+        return handleCORS(NextResponse.json(
+          { error: 'Failed to fetch analytics: ' + error.message },
+          { status: 500 }
+        ));
+      }
+
+      if (!reports || reports.length === 0) {
         return handleCORS(NextResponse.json({
           totalReports: 0,
           totalAreas: 0,
@@ -318,9 +329,13 @@ async function handleRoute(request, { params }) {
           ));
         }
 
-        const report = await db.collection('reports').findOne({ reportId });
+        const { data: report, error } = await supabase
+          .from('reports')
+          .select('*')
+          .eq('reportId', reportId)
+          .single();
 
-        if (!report) {
+        if (error || !report) {
           return handleCORS(NextResponse.json(
             { error: 'Report not found' },
             { status: 404 }
