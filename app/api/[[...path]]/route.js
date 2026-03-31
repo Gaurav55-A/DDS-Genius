@@ -1,10 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { extractTextFromPDF, extractImagesFromPDF, parseThermalData, parseVisualObservations } from '@/lib/pdf-parser';
+import { extractTextFromPDF, extractImagesFromPDF, parseThermalData, parseVisualObservations, parsePropertyInfo } from '@/lib/pdf-parser';
 import { matchObservationsWithThermal, generateAnalytics } from '@/lib/ai-matcher';
 import { generateDDRPDF } from '@/lib/pdf-generator';
 import { generateDDRPDFWithPuppeteer } from '@/lib/pdf-generator-puppeteer';
+
+// Next.js route segment config — allow large PDF uploads and long processing
+export const maxDuration = 120; // 120 seconds for AI processing
+export const dynamic = 'force-dynamic';
 
 // Helper function to handle CORS
 function handleCORS(response) {
@@ -22,9 +26,12 @@ export async function OPTIONS() {
 
 // Route handler function
 async function handleRoute(request, { params }) {
-  const { path = [] } = params;
-  const route = `/${path.join('/')}`;
+  const resolvedParams = await Promise.resolve(params);
+  const { path = [] } = resolvedParams;
+  const route = `/${path.join('/')}`.replace(/\/+$/, '') || '/';
   const method = request.method;
+
+  console.log(`[API] ${method} ${route}`);
 
   try {
     // Root endpoint
@@ -112,12 +119,10 @@ async function handleRoute(request, { params }) {
         const analytics = generateAnalytics(mergedData);
 
         // Extract property info from sample text
-        const propertyInfo = {
-          type: 'Flat',
-          floors: 11,
-          inspectionDate: new Date().toISOString(),
-          inspector: 'DDR Genius AI'
-        };
+        const propertyInfo = parsePropertyInfo(sampleText);
+        propertyInfo.inspectionDate = propertyInfo.inspectionDate || new Date().toISOString();
+        propertyInfo.inspector = propertyInfo.inspector || 'DDR Genius';
+        propertyInfo.type = propertyInfo.type || 'Residential';
 
         // Save to database (use snake_case for Supabase/PostgreSQL compatibility)
         const reportDoc = {

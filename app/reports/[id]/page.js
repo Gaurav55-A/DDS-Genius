@@ -48,17 +48,28 @@ export default function ReportDetailPage() {
         body: JSON.stringify({ reportId: params.id })
       });
 
-      if (!response.ok) throw new Error('Export failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Export failed');
+      }
 
-      const blob = await response.blob();
+      // Explicitly create a PDF blob with the correct MIME type
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
+      
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
-      a.download = `DDR_Report_${params.id}.pdf`;
+      a.download = `DDR_Report_${params.id.substring(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Delay cleanup to ensure download starts
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 1000);
 
       toast.success('Report exported successfully!');
     } catch (error) {
@@ -106,12 +117,12 @@ export default function ReportDetailPage() {
       {/* Header */}
       <header className="border-b border-minimal bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-center md:text-left">
               <h1 className="text-2xl font-bold font-heading text-foreground">Detailed Diagnosis Report</h1>
               <p className="text-sm text-muted-foreground font-body">Report ID: {params.id?.substring(0, 8).toUpperCase()}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end">
               <ThemeToggle />
               <Button
                 onClick={handleExport}
@@ -151,7 +162,7 @@ export default function ReportDetailPage() {
             <CardTitle className="font-heading">Property Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-4 font-body">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-body">
               <div>
                 <span className="text-muted-foreground">Property Type:</span>
                 <span className="ml-2 font-medium">{propertyInfo?.type || 'N/A'}</span>
@@ -236,7 +247,52 @@ export default function ReportDetailPage() {
                   </p>
                 </div>
                 
-                <div className="flex gap-4 text-sm">
+                {/* Image Comparison */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                  <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
+                    <div className="bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                      Visual Inspection Photo
+                    </div>
+                    <div className="p-2 aspect-video flex items-center justify-center relative bg-muted/10">
+                      {report.sampleImages?.find(img => img.page === obs.visualImageRef) ? (
+                        <div className="relative w-full h-full">
+                          <img
+                            src={report.sampleImages.find(img => img.page === obs.visualImageRef).path}
+                            alt="Visual observation"
+                            className="object-contain w-full h-full rounded shadow-sm border border-border/50"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground text-sm flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded p-6 w-full h-full">
+                          <span className="font-medium mb-1">Image Not Available</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
+                    <div className="bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+                      Thermal Imaging
+                    </div>
+                    <div className="p-2 aspect-video flex items-center justify-center relative bg-muted/10">
+                      {report.thermalImages?.find(img => img.page === (obs.thermalImageRef || (index + 1))) ? (
+                        <div className="relative w-full h-full">
+                          <img
+                            src={report.thermalImages.find(img => img.page === (obs.thermalImageRef || (index + 1))).path}
+                            alt="Thermal reading"
+                            className="object-contain w-full h-full rounded shadow-sm border border-border/50"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground text-sm flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded p-6 w-full h-full">
+                          <span className="font-medium mb-1">Image Not Available</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 text-sm mt-4 pt-2 border-t border-border">
                   <span className="text-muted-foreground">Type: <span className="font-medium text-foreground">{obs.defectType || 'N/A'}</span></span>
                   <span className="text-muted-foreground">Severity: <span className="font-medium text-foreground">{obs.severity || 'N/A'}</span></span>
                 </div>

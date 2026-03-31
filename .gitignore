@@ -102,6 +102,9 @@ node_modules/@next/swc-linux-arm64-gnu/next-swc.linux-arm64-gnu.node
 *.env
 *.env.*
 -e 
-# Environment files
-*.env
-*.env.*
+# User Uploads & Test Artifacts
+public/uploads/
+*.pdf
+*.png
+test_*.js
+*.log

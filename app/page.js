@@ -21,8 +21,8 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-minimal bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
               <div className="icon-glow-yellow p-2.5 rounded-lg">
                 <FileText className="h-6 w-6 text-electric-yellow" />
               </div>
@@ -31,7 +31,7 @@ export default function Home() {
                 <p className="text-xs text-muted-foreground font-body">AI-Powered Diagnostic Reports</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end">
               <ThemeToggle />
               <Button
                 onClick={() => router.push('/dashboard/analytics')}
@@ -69,7 +69,7 @@ export default function Home() {
         </div>
 
         {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20 max-w-5xl mx-auto">
           <div className="bg-card border-minimal rounded-lg p-6 hover:shadow-lg transition-all duration-200">
             <div className="icon-glow-yellow h-12 w-12 rounded-lg flex items-center justify-center mb-4">
               <FileText className="h-6 w-6 text-electric-yellow" />

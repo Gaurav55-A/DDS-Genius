@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, Thermometer, Loader2, CheckCircle2, Eye } from 'lucide-react';
@@ -89,6 +89,9 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
       setProgress(100);
       setProcessingStep('Complete!');
       setReportId(data.reportId);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lastReportId', data.reportId);
+      }
       
       toast.success('Report processed successfully!');
       
@@ -104,6 +107,15 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
     }
   };
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedId = sessionStorage.getItem('lastReportId');
+      if (savedId) {
+        setReportId(savedId);
+      }
+    }
+  }, []);
+
   const handleReset = () => {
     setSampleReport(null);
     setThermalImages(null);
@@ -111,6 +123,43 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
     setReportId(null);
     setIsProcessing(false);
     setProcessingStep('');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('lastReportId');
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!reportId) return;
+    try {
+      toast.info('Generating PDF...');
+      const response = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId })
+      });
+
+      if (!response.ok) {
+        throw new Error('PDF generation failed');
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `DDR_Report_${reportId.substring(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 1000);
+      toast.success('PDF downloaded!');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download PDF');
+    }
   };
 
   if (reportId) {
@@ -123,17 +172,30 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
             </div>
           </div>
           <CardTitle className="text-2xl font-heading">Report Generated Successfully!</CardTitle>
-          <CardDescription className="font-body">Report ID: {reportId}</CardDescription>
+          <CardDescription className="font-body">Report ID: {reportId.substring(0, 8).toUpperCase()}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Button 
+          {/* Primary Actions */}
+          <div className="flex gap-3 justify-center flex-wrap">
+            <Button
               onClick={() => router.push(`/reports/${reportId}`)}
               className="bg-electric-yellow hover:bg-electric-yellow/90 text-slate-950 font-medium"
             >
               <Eye className="mr-2 h-4 w-4" />
               View Report
             </Button>
+            <Button
+              onClick={handleDownloadPDF}
+              variant="outline"
+              className="border-electric-yellow text-electric-yellow hover:bg-electric-yellow/10"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          </div>
+          
+          {/* Secondary Actions */}
+          <div className="flex gap-3 justify-center flex-wrap pt-2 border-t border-minimal">
             <Button 
               onClick={() => router.push('/dashboard/analytics')}
               variant="outline"
@@ -141,8 +203,12 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
             >
               View Analytics
             </Button>
-            <Button onClick={handleReset} variant="ghost">
-              Process Another
+            <Button 
+              onClick={handleReset} 
+              variant="destructive"
+              className="bg-bright-rose/10 text-bright-rose hover:bg-bright-rose/20 border border-bright-rose/30"
+            >
+              ✕ Reset & Start Over
             </Button>
           </div>
         </CardContent>
