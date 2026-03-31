@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, Thermometer, Loader2, CheckCircle2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 
 export default function UploadZone({ onUploadSuccess, processedReportId }) {
+  const router = useRouter();
   const [sampleReport, setSampleReport] = useState(null);
   const [thermalImages, setThermalImages] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -126,14 +128,14 @@ export default function UploadZone({ onUploadSuccess, processedReportId }) {
         <CardContent className="space-y-4">
           <div className="flex gap-4 justify-center flex-wrap">
             <Button 
-              onClick={() => window.location.href = `/reports/${reportId}`}
+              onClick={() => router.push(`/reports/${reportId}`)}
               className="bg-electric-yellow hover:bg-electric-yellow/90 text-slate-950 font-medium"
             >
               <Eye className="mr-2 h-4 w-4" />
               View Report
             </Button>
             <Button 
-              onClick={() => window.location.href = `/dashboard/analytics`}
+              onClick={() => router.push('/dashboard/analytics')}
               variant="outline"
               className="border-minimal"
             >
