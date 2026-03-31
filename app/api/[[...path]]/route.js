@@ -70,7 +70,48 @@ async function handleRoute(request, { params }) {
         const sampleText = await extractTextFromPDF(sampleBuffer);
         const thermalText = await extractTextFromPDF(thermalBuffer);
 
-        // Extract images
+        // Upload raw PDFs to Supabase Storage for client-side rendering
+        console.log('Uploading raw PDFs to Supabase Storage...');
+        let visualPdfUrl = null;
+        let thermalPdfUrl = null;
+
+        try {
+          const { error: visualUploadError } = await supabase.storage
+            .from('report-images')
+            .upload(`${reportId}/visual.pdf`, sampleBuffer, {
+              contentType: 'application/pdf',
+              upsert: true
+            });
+          if (!visualUploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('report-images')
+              .getPublicUrl(`${reportId}/visual.pdf`);
+            visualPdfUrl = publicUrl;
+            console.log('Visual PDF uploaded:', visualPdfUrl);
+          } else {
+            console.error('Visual PDF upload failed:', visualUploadError.message);
+          }
+
+          const { error: thermalUploadError } = await supabase.storage
+            .from('report-images')
+            .upload(`${reportId}/thermal.pdf`, thermalBuffer, {
+              contentType: 'application/pdf',
+              upsert: true
+            });
+          if (!thermalUploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('report-images')
+              .getPublicUrl(`${reportId}/thermal.pdf`);
+            thermalPdfUrl = publicUrl;
+            console.log('Thermal PDF uploaded:', thermalPdfUrl);
+          } else {
+            console.error('Thermal PDF upload failed:', thermalUploadError.message);
+          }
+        } catch (storageError) {
+          console.error('Supabase Storage error:', storageError);
+        }
+
+        // Extract images (will use SVG placeholders on Vercel, real images locally)
         console.log('Extracting images from PDFs...');
         const sampleImages = await extractImagesFromPDF(sampleBuffer, reportId, 'visual');
         const thermalImagesExtracted = await extractImagesFromPDF(thermalBuffer, reportId, 'thermal');
@@ -134,6 +175,8 @@ async function handleRoute(request, { params }) {
           thermalimages: thermalImagesExtracted,
           mergeddata: mergedData,
           analytics: analytics,
+          visualpdfurl: visualPdfUrl,
+          thermalpdfurl: thermalPdfUrl,
           status: 'completed'
           // createdAt and updatedAt handled by database DEFAULT NOW()
         };
@@ -191,6 +234,8 @@ async function handleRoute(request, { params }) {
         thermalImages: report.thermalimages,
         mergedData: report.mergeddata,
         analytics: report.analytics,
+        visualPdfUrl: report.visualpdfurl,
+        thermalPdfUrl: report.thermalpdfurl,
         status: report.status,
         createdAt: report.createdat,
         updatedAt: report.updatedat
@@ -226,6 +271,8 @@ async function handleRoute(request, { params }) {
         thermalImages: report.thermalimages,
         mergedData: report.mergeddata,
         analytics: report.analytics,
+        visualPdfUrl: report.visualpdfurl,
+        thermalPdfUrl: report.thermalpdfurl,
         status: report.status,
         createdAt: report.createdat,
         updatedAt: report.updatedat

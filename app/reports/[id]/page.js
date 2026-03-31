@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Download, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ConflictAlert } from '@/components/conflict-alert';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+
+// Dynamically import PdfPageRenderer (client-only, uses canvas)
+const PdfPageRenderer = dynamic(() => import('@/components/pdf-page-renderer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center bg-muted/30 rounded p-8">
+      <div className="animate-spin h-6 w-6 border-2 border-electric-blue border-t-transparent rounded-full" />
+    </div>
+  ),
+});
 
 export default function ReportDetailPage() {
   const params = useParams();
@@ -15,6 +26,7 @@ export default function ReportDetailPage() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const reportContentRef = useRef(null);
 
   useEffect(() => {
     if (params.id) {
@@ -40,36 +52,31 @@ export default function ReportDetailPage() {
   const handleExport = async () => {
     try {
       setExporting(true);
-      toast.info('Generating PDF...');
+      toast.info('Generating PDF... This may take a moment.');
 
-      const response = await fetch('/api/export-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportId: params.id })
-      });
+      // Use html2pdf.js for client-side PDF generation (no server/Puppeteer needed)
+      const html2pdf = (await import('html2pdf.js')).default;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Export failed');
+      const element = reportContentRef.current;
+      if (!element) {
+        throw new Error('Report content not found');
       }
 
-      // Explicitly create a PDF blob with the correct MIME type
-      const arrayBuffer = await response.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `DDR_Report_${params.id.substring(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Delay cleanup to ensure download starts
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 1000);
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `DDR_Report_${params.id.substring(0, 8)}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      };
+
+      await html2pdf().set(opt).from(element).save();
 
       toast.success('Report exported successfully!');
     } catch (error) {
@@ -111,6 +118,10 @@ export default function ReportDetailPage() {
   }
 
   const { mergedData, propertyInfo, analytics } = report;
+
+  // Determine image source: use PDF URLs for client-side rendering, or fallback to stored paths
+  const hasVisualPdf = !!report.visualPdfUrl;
+  const hasThermalPdf = !!report.thermalPdfUrl;
 
   return (
     <div className="min-h-screen bg-background">
@@ -154,8 +165,8 @@ export default function ReportDetailPage() {
         </div>
       </header>
 
-      {/* Report Content */}
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      {/* Report Content - wrapped in ref for html2pdf capture */}
+      <main ref={reportContentRef} className="container mx-auto px-4 py-8 space-y-8">
         {/* Property Info */}
         <Card className="border-minimal">
           <CardHeader>
@@ -249,19 +260,25 @@ export default function ReportDetailPage() {
                 
                 {/* Image Comparison */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                  {/* Visual Inspection Photo */}
                   <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
                     <div className="bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
                       Visual Inspection Photo
                     </div>
-                    <div className="p-2 aspect-video flex items-center justify-center relative bg-muted/10">
-                      {report.sampleImages?.find(img => img.page === obs.visualImageRef) ? (
-                        <div className="relative w-full h-full">
-                          <img
-                            src={report.sampleImages.find(img => img.page === obs.visualImageRef).path}
-                            alt="Visual observation"
-                            className="object-contain w-full h-full rounded shadow-sm border border-border/50"
-                          />
-                        </div>
+                    <div className="p-2 flex items-center justify-center relative bg-muted/10" style={{ minHeight: '200px' }}>
+                      {hasVisualPdf && obs.visualImageRef ? (
+                        <PdfPageRenderer
+                          pdfUrl={report.visualPdfUrl}
+                          pageNumber={obs.visualImageRef}
+                          alt="Visual observation"
+                          className="w-full"
+                        />
+                      ) : report.sampleImages?.find(img => img.page === obs.visualImageRef)?.path?.startsWith('data:') ? (
+                        <img
+                          src={report.sampleImages.find(img => img.page === obs.visualImageRef).path}
+                          alt="Visual observation"
+                          className="object-contain w-full h-full rounded shadow-sm border border-border/50"
+                        />
                       ) : (
                         <div className="text-muted-foreground text-sm flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded p-6 w-full h-full">
                           <span className="font-medium mb-1">Image Not Available</span>
@@ -270,19 +287,25 @@ export default function ReportDetailPage() {
                     </div>
                   </div>
                   
+                  {/* Thermal Imaging */}
                   <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
                     <div className="bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
                       Thermal Imaging
                     </div>
-                    <div className="p-2 aspect-video flex items-center justify-center relative bg-muted/10">
-                      {report.thermalImages?.find(img => img.page === (obs.thermalImageRef || (index + 1))) ? (
-                        <div className="relative w-full h-full">
-                          <img
-                            src={report.thermalImages.find(img => img.page === (obs.thermalImageRef || (index + 1))).path}
-                            alt="Thermal reading"
-                            className="object-contain w-full h-full rounded shadow-sm border border-border/50"
-                          />
-                        </div>
+                    <div className="p-2 flex items-center justify-center relative bg-muted/10" style={{ minHeight: '200px' }}>
+                      {hasThermalPdf && (obs.thermalImageRef || (index + 1)) ? (
+                        <PdfPageRenderer
+                          pdfUrl={report.thermalPdfUrl}
+                          pageNumber={obs.thermalImageRef || (index + 1)}
+                          alt="Thermal reading"
+                          className="w-full"
+                        />
+                      ) : report.thermalImages?.find(img => img.page === (obs.thermalImageRef || (index + 1)))?.path?.startsWith('data:') ? (
+                        <img
+                          src={report.thermalImages.find(img => img.page === (obs.thermalImageRef || (index + 1))).path}
+                          alt="Thermal reading"
+                          className="object-contain w-full h-full rounded shadow-sm border border-border/50"
+                        />
                       ) : (
                         <div className="text-muted-foreground text-sm flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded p-6 w-full h-full">
                           <span className="font-medium mb-1">Image Not Available</span>
